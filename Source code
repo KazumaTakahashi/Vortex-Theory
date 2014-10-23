@@ -1,27 +1,181 @@
-#include 〈math.h〉
+// 確認用.cpp : コンソール アプリケーションのエントリ ポイントを定義します。
+//
 
-int main (void)
+#include "stdafx.h"
+#include <math.h>
+
+#define N 50   //分割数(積分と対応させる)
+
+//配列の定義
+double D_VT;
+double D_sigma[N+1];
+double D_Cl[N+1];
+double D_alpha_i[N+1];
+double D_fai[N+1];
+double D_VE[N+1];
+
+#define pai 4.0*atan(1.0)
+
+
+
+int _tmain(int argc, _TCHAR* argv[])
 {
+	
+	double VT;
+	double sigma;
+	double Cl;
+	double alpha_i;
+	double fai;
+	double VE;
+	double a, wa, lamda, wt, x, xh, delta_theta, delta_Cl,delta_alpha, omg, r, tmax,V ,alpha, beta, Cl0, gamma, faiT, F, B, c, n, R, D,wtz,VR;
+	double eta;//効率
+
+	int i;
+	
+	/*プロペラ諸元*/
+	n=30.0;       // 回転数[Hz] 
+	V=0.0;        //機速[m/s]
+	D=0.23;       //プロペラ直径[m]
+	R=D/2.0;      //プロペラ半径[m]
+	xh = 0.05*D;		//ハブの位置[m]
+	c=0.02;       //コード長[m]
+	a = 2.0*pai;  //揚力傾斜
+	beta=12.0*pai/180.0;    //取付角[°]
+	B=2.0;        //ブレード枚数
+	tmax=0.001;     //最大翼厚
+	Cl0=0.0;        //ゼロ揚力迎角
+	
+
+	omg=2.0*pai*n;//角速度ω[rad/s]
+	sigma=B*c/(pai*R); //σ
+
+
+//for(V=0.0 ;V<1.1;V+=0.1)
+//{
+
+	for(i=0; i<N+1 ; i++)
+	{
+		wt=0.0001;	// 1st STEP
+		r = i*(R-xh)/50.0 + xh;
+		x = r/R;
+		VT = omg*R;
+		lamda=V/(omg*R);    //λ  
+		VR =sqrt(V*V+VT*VT);           //回転と機速の合速度  <<
+		fai=atan(lamda/x);  //φ
+
+	do{
+		wtz=wt;   //古い値を置き換える
+
+	/* 2nd STEP */
+	wa = 0.5*VT*( -lamda+sqrt( lamda*lamda+4.0*(wt/VT)*(x-wt/VT) ) );  //P302,6.35
+
+	/* 3rd STEP */
+	delta_theta = ( atan( (V+wa)/(omg*r-2.0*wt) ) - atan( (V+wa)/(omg*r) ) );  //P304,6.49
+	delta_Cl = (a*delta_theta)/4.0;											   //P304,6.48
+	delta_alpha = ( (4.0*lamda*sigma)*tmax )/( 15.0*(lamda*lamda+x*x)*c );     //P304,6.47
+	
+	/* 4th　STEP */
+	alpha_i = atan( (V+wa)/(omg*r-wt) ) - fai;  //P303,6.45
+
+	/* 5th STEP */
+	alpha = beta - alpha_i - fai - delta_alpha ;
+
+	/* 6th STEP */
+	Cl = a*alpha + Cl0 - delta_Cl;
+
+	/* 7th STEP */
+	VE = VT * sqrt( ( (lamda+wa/VT)*(lamda+wa/VT) ) +( (x-wt/VT)*(x-wt/VT) ) );//P303,6.44
+	
+	/* 8th STEP */
+	gamma = 0.5 * c * Cl * VE ;  //P303,6.41
+
+	/* 9th STEP */
+	faiT = atan(lamda) ;
+	F=(2.0/pai)*acos(exp( - ( (B*(1.0-x))/(2.0*sin(beta)) ) ) );
+	wt = B*gamma/(4.0*pai*r*F);  //P303,6.37
+
+	}while(fabs( wt-wtz ) < 1.0e-4);
+	
+
+	
+	D_Cl[i]     = Cl ;
+	D_alpha_i[i] = alpha_i ;
+	D_fai[i]    = fai ;
+	D_VE[i]     = VE ;
+
+	//printf("%d: %f ,%f, %f, %f, %f, %f, %f, %f, %f\n",i,wa,delta_alpha ,delta_theta, delta_Cl, alpha_i, Cl, VE ,wt, F);
+
+
+	/*CTとCPを求める*/
+	/*CTの積分*/
+		int k;
+		double  h, f0, fe, sumCT, sumCP, f1, f2, f3;
+		double f = pai/8.0*(pow(2,VE/VT)*sigma*(Cl*cos(fai+alpha_i))  ) ;  //P304,6.46a
+		n=50;     /*積分範囲の分割数*/
+		h=(1.0-xh) / (2*n) ;   //区間幅　
+		f0=0;
+		fe=0;
+		for(k=1;k<=2*n-3;k=k+2){
+			x = xh+h*k;
+			f0=f0+f;
+			x = xh+h*(k+1);
+			fe=fe+f;
+		}
+
+		x = xh;
+		f1 = f;
+		x = 1.0;
+		f2 = f;
+		x = 1.0-h;
+		f3 = f;
+		sumCT=(f1+f2+4.0*(f0+f3)+2.0*fe)*h/3.0;
+		//printf("%f\n",sumCT);
+
+	/*CPの積分*/
+		f = pow(2,pai)*x/8.0*(pow(2,VE/VT)*sigma*(Cl*sin(fai+alpha_i))  ) ;  //P304,6.46b
+		n=50;     /*積分範囲の分割数*/
+		h=(1.0-xh) / (2*n) ;   //区間幅　
+		f0=0;
+		fe=0;
+		for(k=1;k<=2*n-3;k=k+2){
+			x = xh+h*k;
+			f0=f0+f;
+			x = xh+h*(k+1);
+			fe=fe+f;
+		}
+
+		x = xh;
+		f1 = f;
+		x = 1.0;
+		f2 = f;
+		x = 1.0-h;
+		f3 = f;
+		sumCP=(f1+f2+4.0*(f0+f3)+2.0*fe)*h/3.0;
+
+		//printf("%f\n",sumCP);
+
+		x = r/R;
+		double J = V/(n*D);
+		eta = (sumCT/sumCP)*J;
+		printf("%d,%f\n",i,eta);
+//	}
+
+//		x = r/R;
+//		double J = V/(n*D);
+
+		//printf("%f\n",J);
+
+//		double sumCT,sumCP;
+//		η = (sumCT/sumCP)*J;
+
+//		printf("%f,%f\n",V,η);
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- return 0
 }
+
+
+
+	return 0;
+}
+
