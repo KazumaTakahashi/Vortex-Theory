@@ -30,11 +30,13 @@ int _tmain(int argc, _TCHAR* argv[])
 	double a, wa, lamda, wt, x, xh, delta_theta, delta_Cl,delta_alpha, omg, r, tmax,V ,alpha, beta, Cl0, gamma, faiT, F, B, c, n, R, D,wtz,VR;
 	double eta;//効率
 
+	double J;//進行率
+
 	int i;
 	
 	/*プロペラ諸元*/
 	n=30.0;       // 回転数[Hz] 
-	V=0.0;        //機速[m/s]
+	//V=1.0;        //機速[m/s]
 	D=0.23;       //プロペラ直径[m]
 	R=D/2.0;      //プロペラ半径[m]
 	xh = 0.05*D;		//ハブの位置[m]
@@ -50,15 +52,16 @@ int _tmain(int argc, _TCHAR* argv[])
 	sigma=B*c/(pai*R); //σ
 
 
-//for(V=0.0 ;V<1.1;V+=0.1)
-//{
+for(J=0.0 ;J<=2.0;J+=0.01)
+{
+	V = J*n*D;
 
 	for(i=0; i<N+1 ; i++)
 	{
 		wt=0.0001;	// 1st STEP
 		r = i*(R-xh)/50.0 + xh;
 		x = r/R;
-		VT = omg*R;
+		VT = omg*R;//一定値
 		lamda=V/(omg*R);    //λ  
 		VR =sqrt(V*V+VT*VT);           //回転と機速の合速度  <<
 		fai=atan(lamda/x);  //φ
@@ -97,11 +100,6 @@ int _tmain(int argc, _TCHAR* argv[])
 	}while(fabs( wt-wtz ) < 1.0e-4);
 	
 
-	
-	D_Cl[i]     = Cl ;
-	D_alpha_i[i] = alpha_i ;
-	D_fai[i]    = fai ;
-	D_VE[i]     = VE ;
 
 	//printf("%d: %f ,%f, %f, %f, %f, %f, %f, %f, %f\n",i,wa,delta_alpha ,delta_theta, delta_Cl, alpha_i, Cl, VE ,wt, F);
 
@@ -155,10 +153,10 @@ int _tmain(int argc, _TCHAR* argv[])
 		//printf("%f\n",sumCP);
 
 		x = r/R;
-		double J = V/(n*D);
+
 		eta = (sumCT/sumCP)*J;
-		printf("%d,%f\n",i,eta);
-//	}
+
+	}
 
 //		x = r/R;
 //		double J = V/(n*D);
@@ -170,9 +168,22 @@ int _tmain(int argc, _TCHAR* argv[])
 
 //		printf("%f,%f\n",V,η);
 
+	printf("%.3f,%.3f\n", J, eta);
 
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
