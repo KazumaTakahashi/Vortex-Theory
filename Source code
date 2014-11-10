@@ -4,38 +4,38 @@
 #include "stdafx.h"
 #include <math.h>
 
-#define N 50   //分割数
+#define N 50.0   //分割数
 #define pai 4.0*atan(1.0)
-
 
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-	
-	double VT;
-	double sigma;
-	double Cl;
-	double alpha_i;
-	double fai;
-	double VE;
-	double a, wa, lamda, wt, x, xh, delta_theta, delta_Cl, delta_alpha, omg, r, tmax, V, alpha, beta, Cl0, gamma, faiT, F, B, c, n, R, D, wtz, VR, sumCT, sumCP;
-	double eta;//効率
+	double i ;  //ループカウンター
+	double k ;
 
-	double J;//進行率
+	double V, VE, VR, VT;
+	double gamma, lamda, omg, sigma;
+	double Cl, Cl0;
+	double a, alpha, alpha_i, beta, delta_alpha, delta_Cl, delta_theta, fai, faiT;
+	double c, D, r, R, x, xh;
+	double wa, wt, wtz, tmax, F, B, n;
 
-	int i;
+	double sumCT, sumCP;
+	double eta;  //効率
+	double J;    //進行率
+
 	
 	/*プロペラ諸元*/
-	n=30.0;       // 回転数[Hz] 
-	D=0.23;       //プロペラ直径[m]
-	R=D/2.0;      //プロペラ半径[m]
-	xh = 0.05*D;		//ハブの位置[m]
-	c=0.02;       //コード長[m]
-	a = 2.0*pai;  //揚力傾斜
-	beta=12.0*pai/180.0;    //取付角[°]
-	B=2.0;        //ブレード枚数
-	tmax=0.001;     //最大翼厚
-	Cl0=0.0;        //ゼロ揚力迎角
+	n    =30.0;     // 回転数[Hz] 
+	D    =0.23;     //プロペラ直径[m]
+	R    =D/2.0;    //プロペラ半径[m]
+	xh   =0.05*D;	//ハブの位置[m]
+	c    =0.02;     //コード長[m]
+	a    =2.0*pai;  //揚力傾斜
+	beta =12.0*pai/180.0;//取付角[°]
+	B    =2.0;      //ブレード枚数
+	tmax =0.001;    //最大翼厚
+	Cl0  =0.0;      //ゼロ揚力迎角
 	
 
 	omg=2.0*pai*n;//角速度ω[rad/s]
@@ -46,60 +46,61 @@ for(J=0.0 ;J<=1.01;J+=0.01)
 {
 	V = J*n*D;  //機速[m/s]
 
-	for(i=0; i<N+1 ; i++)
+	for(i=0.0; i<N+1.0 ; i+=1.0)
 	{
-		wtz=0.0001;	// 1st STEP
-		r = i*(R-xh)/50.0 + xh;
-		x = r/R;
-		VT = omg*R;//一定値
-		lamda=V/(omg*R);    //λ  
-		VR =sqrt(V*V+VT*VT);           //回転と機速の合速度  <<
-		fai=atan(lamda/x);  //φ
-
+		wt   = 0.00001;	         // 1st STEP
+		r    = i*(R-xh)/50.0 + xh;
+		x    = r/R;
+		VT   = omg*R;            //一定値
+		lamda= V/(omg*R);        //λ  
+		VR   = sqrt(pow(2,V) + pow(2,VT));//回転と機速の合速度
+		fai  = atan(lamda/x);    //φ
+//		printf("J %.3f\n",J);
 		do{
-			wt = wtz;   //古い値を置き換える
 
 			/* 2nd STEP */
-			wa = 0.5*VT*( -lamda+sqrt( lamda*lamda+4.0*(wt/VT)*(x-wt/VT) ) );  //P302,6.35
+			wa = 0.5*VT*( -lamda+sqrt( lamda*lamda+4.0*(wt/VT)*(x-wt/VT) ) );  //P302,6.35  check OK
 
 			/* 3rd STEP */
-			delta_theta = ( atan( (V+wa)/(omg*r-2.0*wt) ) - atan( (V+wa)/(omg*r) ) );  //P304,6.49
-			delta_Cl = (a*delta_theta)/4.0;											   //P304,6.48
-			delta_alpha = ( (4.0*lamda*sigma)*tmax )/( 15.0*(lamda*lamda+x*x)*c );     //P304,6.47
+			delta_theta =  atan( (V+wa)/(omg*r-2.0*wt) ) - atan( (V+wa)/(omg*r) ) ;  //P304,6.49  check OK
+			delta_Cl    = (a*delta_theta)/4.0;										 //P304,6.48  check OK
+			delta_alpha = ( 4.0*lamda*sigma*tmax )/( 15.0*(lamda*lamda + x*x)*c );   //P304,6.47  check OK
 	
 			/* 4th　STEP */
-			alpha_i = atan( (V+wa)/(omg*r-wt) ) - fai;  //P303,6.45
+			alpha_i = atan( (V+wa)/(omg*r-wt) ) - fai;  //P303,6.45  check OK
 
 			/* 5th STEP */
-			alpha = beta - alpha_i - fai - delta_alpha ;
+			alpha = beta - alpha_i - fai - delta_alpha ;  //check OK
 
 			/* 6th STEP */
-			Cl = a*alpha + Cl0 - delta_Cl;
+			Cl = a*alpha + Cl0 - delta_Cl;  //delta_Clがdelta_Cl0じゃなくていいのか？
 
 			/* 7th STEP */
-			VE = VT * sqrt( ( (lamda+wa/VT)*(lamda+wa/VT) ) +( (x-wt/VT)*(x-wt/VT) ) );//P303,6.44
+			VE = VT * sqrt(  ((lamda+wa/VT)*(lamda+wa/VT)) + ((x-wt/VT)*(x-wt/VT))  );//P303,6.44  check OK  
 	
 			/* 8th STEP */
-			gamma = 0.5 * c * Cl * VE ;  //P303,6.41
+			gamma = 0.5 * c * Cl * VE ;    //P303,6.41  check OK
 
 			/* 9th STEP */
-			faiT = atan(lamda) ;
-			F=(2.0/pai)*acos(exp( - ( (B*(1.0-x))/(2.0*sin(beta)) ) ) );
-			wtz = B*gamma/(4.0*pai*r*F);  //P303,6.37
+			faiT = atan(lamda) ;		   //P303,6.39  check OK
+			F    = (2.0/pai)*acos(exp( - ( (B*(1.0-x))/(2.0*sin(beta)) ) ) );  //P303,6.38  check OK
+			wtz  = B*gamma/(4.0*pai*r*F);  //P303,6.37  check OK
 
-			printf("wt %.3f , wtz %.3f\n", wt, wtz);
+//			printf("wt %.3f , wtz %.3f, faiT %.3f\n", wt, wtz, faiT);
+
+			if( fabs(wt-wtz ) < 1.0e-4 )break;
+			wt = wtz;   //古い値を置き換える
 
 		}while(fabs( wt-wtz ) < 1.0e-4);
 	
-		//printf("wt %.3f , wtz %.3f\n", wt, wtz);
+//		printf("wt %.3f , wtz %.3f\n", wt, wtz);
 
 
 
 		/*CTとCPを求める*/
 		/*CTの積分*/
-		double k;
 		double  h, f0, fe, f1, f2, f3;
-		double f = pai/8.0*(pow(2.0,VE/VT)*sigma*(Cl*cos(fai+alpha_i))  ) ;  //P304,6.46a
+		double f = pai/8.0*( pow(2.0,VE/VT)*sigma*Cl*cos(fai+alpha_i)  ) ;  //P304,6.46a
 		n=100.0;     /*積分範囲の分割数*/
 		h=(1.0-xh) / (2.0*n) ;   //区間幅　
 		f0=0.0;
@@ -118,10 +119,10 @@ for(J=0.0 ;J<=1.01;J+=0.01)
 		x = 1.0-h;
 		f3 = f;
 		sumCT=(f1+f2+4.0*(f0+f3)+2.0*fe)*h/3.0;
-		//printf("%f\n",sumCT);
+//		printf("%f\n",sumCT);
 
 		/*CPの積分*/
-		f = pow(2,pai)*x/8.0*(pow(2.0,VE/VT)*sigma*(Cl*sin(fai+alpha_i))  ) ;  //P304,6.46b
+		f = pow(2,pai)*x/8.0*( pow(2.0,VE/VT)*sigma*Cl*sin(fai+alpha_i)  ) ;  //P304,6.46b
 		n=100.0;     /*積分範囲の分割数*/
 		h=(1.0-xh) / (2.0*n) ;   //区間幅　
 		f0=0.0;
@@ -141,7 +142,7 @@ for(J=0.0 ;J<=1.01;J+=0.01)
 		f3 = f;
 		sumCP=(f1+f2+4.0*(f0+f3)+2.0*fe)*h/3.0;
 
-		//printf("%f\n",sumCP);
+//		printf("%f\n",sumCP);
 
 
 		eta = (sumCT/sumCP)*J;
@@ -151,8 +152,8 @@ for(J=0.0 ;J<=1.01;J+=0.01)
 
 
 
-	//printf("CT  %.6f,CP  %.6f\n", sumCT, sumCP);
-	//printf("進行率  %.3f,効率  %.3f\n", J, eta);
+//	printf("CT  %.6f,CP  %.6f\n", sumCT, sumCP);
+	printf("進行率  %.2f,効率  %.3f\n", J, eta);
 
 
 }
@@ -162,4 +163,3 @@ for(J=0.0 ;J<=1.01;J+=0.01)
 
 	return 0;
 }
-
